@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samunder - Developer & AI Explorer</title>
+    <!-- Removed Google Fonts link for Poppins/Roboto -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* 3270 Font Import */
+        @font-face {
+            font-family: 'IBM3270';
+            src: url('https://cdn.jsdelivr.net/gh/rbanffy/3270font@2.0.2/dist/web/fonts/3270-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'IBM3270';
+            src: url('https://cdn.jsdelivr.net/gh/rbanffy/3270font@2.0.2/dist/web/fonts/3270-Medium.woff2') format('woff2');
+            font-weight: 500; /* Or 600 depending on how Medium maps */
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --bg-color: #0D0D10; /* Even darker for a terminal feel */
+            --card-bg-color: #18181D;
+            --card-bg-hover-color: #1F1F26;
+            --text-color: #C8C8C8; /* Lighter grey for pixel font readability */
+            --secondary-text-color: #9090A0;
+
+            --mint-accent-color: #76EEC6; /* Slightly adjusted mint */
+            --mint-accent-glow: rgba(118, 238, 198, 0.2);
+            --mint-accent-darker: #5dbba1;
+
+            --blue-accent-color: #6CA0FF;
+            --lavender-accent-color: #B888E2;
+
+            --border-color-panel: rgba(118, 238, 198, 0.1);
+            --line-guide-color: rgba(118, 238, 198, 0.15);
+
+            /* Changed fonts */
+            --font-primary: 'IBM3270', monospace; /* Monospace fallback */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.8; /* Adjusted for pixel font */
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            /* For crisp pixel font rendering */
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: grayscale;
+            font-smooth: never;
+            image-rendering: pixelated; /* May help on some browsers for the whole page */
+        }
+        /* Apply crisp rendering to text elements specifically if body isn't enough */
+        h1, h2, h3, p, span, a, li {
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeSpeed; /* May help, or geometricPrecision */
+        }
+
+
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            z-index: 1;
+        }
+
+        header, main section {
+            background-color: var(--card-bg-color);
+            padding: 30px 35px 40px 35px;
+            margin-bottom: 35px;
+            border-radius: 6px; /* Sharper radius for retro feel */
+            border: 1px solid var(--border-color-panel);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3); /* More subtle shadow */
+            transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, background-color 0.3s ease;
+            position: relative;
+        }
+
+        header:hover, main section:hover {
+            transform: translateY(-3px); /* Less movement */
+            background-color: var(--card-bg-hover-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.35), 0 0 15px var(--mint-accent-glow);
+        }
+        main section:hover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px; /* Thinner line */
+            background: linear-gradient(90deg, transparent, var(--mint-accent-color), transparent);
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            opacity: 0.6;
+            animation: shimmerTopBorder 2.5s infinite linear alternate;
+        }
+
+        @keyframes shimmerTopBorder {
+            from { background-position: -100% 0; }
+            to { background-position: 100% 0; }
+        }
+
+        header {
+            text-align: center;
+            padding-top: 40px;
+        }
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 2px;
+            background-color: var(--mint-accent-color);
+            opacity: 0.4;
+            border-radius: 0; /* Sharp line */
+        }
+
+        .profile-pic {
+            width: 140px; /* Adjusted size */
+            height: 140px;
+            border-radius: 4px; /* More square-ish */
+            object-fit: cover;
+            margin-bottom: 30px;
+            border: 3px solid var(--mint-accent-color);
+            box-shadow: 0 0 10px var(--mint-accent-glow);
+            filter: grayscale(20%) contrast(110%) brightness(0.95); /* Slightly darker */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            image-rendering: pixelated; /* Ensure profile pic edges are crisp if scaled */
+        }
+        .profile-pic:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 18px var(--mint-accent-glow), 0 0 5px var(--mint-accent-color);
+        }
+
+        header h1 {
+            font-family: var(--font-primary);
+            font-size: 2.8rem; /* Adjust for pixel font */
+            font-weight: 500; /* Medium weight */
+            margin-bottom: 10px;
+            color: #E0E0E0; /* Brighter */
+            letter-spacing: 1px; /* Pixel fonts might need spacing adjustments */
+            text-transform: uppercase; /* Common for retro terminal */
+        }
+
+        .tagline {
+            font-family: var(--font-primary);
+            font-size: 1.1rem; /* Adjust */
+            color: var(--secondary-text-color);
+            font-weight: 400; /* Regular */
+            min-height: 1.5em;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        main section h2 {
+            font-family: var(--font-primary);
+            font-size: 1.8rem; /* Adjust */
+            font-weight: 500; /* Medium */
+            color: var(--text-color);
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            display: flex;
+            align-items: center;
+            position: relative;
+            text-transform: uppercase;
+        }
+        main section h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--mint-accent-color), var(--blue-accent-color));
+            border-radius: 0;
+            transition: width 0.3s ease;
+        }
+        main section:hover h2::after {
+            width: 70px;
+        }
+
+        main section h2 i {
+            margin-right: 12px;
+            font-size: 1.6rem; /* FA icons are vector, will contrast */
+            color: var(--mint-accent-color);
+            transition: transform 0.3s ease;
+        }
+        main section:hover h2 i {
+            transform: scale(1.05);
+        }
+
+        #about p, .focus-item p, #contact p { /* Target all p tags for body text */
+            font-family: var(--font-primary);
+            font-size: 1rem; /* Base size for pixel body */
+            color: var(--secondary-text-color);
+            line-height: 1.9; /* More line height for pixel blocks */
+            font-weight: 400;
+            letter-spacing: 0.2px;
+        }
+
+        .focus-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Adjusted minmax */
+            gap: 25px;
+        }
+
+        .focus-item {
+            background-color: var(--card-bg-hover-color);
+            padding: 25px 20px;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid var(--border-color-panel);
+            transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+        .focus-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            transition: left 0.35s ease-out;
+        }
+        .focus-item:hover::before {
+            left: 0;
+        }
+        .focus-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.25), 0 0 8px var(--mint-accent-glow);
+        }
+
+        .focus-item i {
+            font-size: 2.5rem; /* FA icons */
+            margin-bottom: 15px;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+        .focus-item:hover i {
+            transform: scale(1.1);
+        }
+        .focus-item.ai i { color: var(--mint-accent-color); }
+        .focus-item.ai::before { background: var(--mint-accent-color); }
+        .focus-item.rust i { color: var(--blue-accent-color); }
+        .focus-item.rust::before { background: var(--blue-accent-color); }
+        .focus-item.leetcode i { color: var(--lavender-accent-color); }
+        .focus-item.leetcode::before { background: var(--lavender-accent-color); }
+        .focus-item.build i { color: #FFC107; } /* Brighter Gold */
+        .focus-item.build::before { background: #FFC107; }
+
+        .focus-item h3 {
+            font-family: var(--font-primary);
+            font-size: 1.2rem; /* Adjust */
+            margin-bottom: 10px;
+            color: var(--text-color);
+            font-weight: 500; /* Medium */
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px; /* Tighter gap for pixel tags */
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .skills-list span {
+            font-family: var(--font-primary);
+            background-color: transparent;
+            color: var(--secondary-text-color);
+            padding: 7px 14px; /* Adjusted for pixel font */
+            border-radius: 2px; /* Sharp edges */
+            font-size: 0.9rem; /* Adjust */
+            font-weight: 400;
+            border: 1px solid var(--line-guide-color);
+            transition: all 0.25s ease;
+            cursor: default;
+            letter-spacing: 0.5px;
+        }
+        .skills-list span:hover {
+            border-color: var(--mint-accent-color);
+            color: var(--mint-accent-color);
+            background-color: rgba(118, 238, 198, 0.05); /* Very subtle bg */
+            transform: translateY(-1px);
+            box-shadow: 0 1px 5px var(--mint-accent-glow);
+        }
+        .skills-list span.highlight-skill {
+            border-color: var(--blue-accent-color);
+            color: var(--blue-accent-color);
+        }
+        .skills-list span.highlight-skill:hover {
+            background-color: rgba(108, 160, 255, 0.1);
+            color: var(--blue-accent-color);
+            box-shadow: 0 1px 5px rgba(108, 160, 255, 0.3);
+        }
+
+        #contact p {
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .social-links {
+            text-align: center;
+        }
+        .social-links a {
+            color: var(--secondary-text-color);
+            font-size: 1.8rem; /* FA icons */
+            margin: 0 12px;
+            transition: color 0.25s ease, transform 0.25s ease;
+            display: inline-block;
+        }
+        .social-links a:hover {
+            color: var(--mint-accent-color);
+            transform: scale(1.15) translateY(-2px);
+        }
+
+        footer {
+            font-family: var(--font-primary);
+            text-align: center;
+            padding: 25px;
+            margin-top: 20px;
+            color: var(--secondary-text-color);
+            font-size: 0.85rem; /* Adjust */
+            border-top: 1px solid var(--line-guide-color);
+            letter-spacing: 0.5px;
+        }
+
+        /* Responsive Design Adjustments */
+        @media (max-width: 768px) {
+            body { padding: 30px 15px; }
+            header, main section { padding: 25px 30px 30px 30px; }
+            .profile-pic { width: 120px; height: 120px; }
+            header h1 { font-size: 2.4rem; }
+            main section h2 { font-size: 1.6rem; }
+            #about p, .focus-item p, #contact p { font-size: 0.95rem; line-height: 1.8; }
+
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 20px 10px; }
+            header, main section { padding: 20px 25px 25px 25px; }
+            .profile-pic { width: 100px; height: 100px; }
+            header h1 { font-size: 2rem; }
+            main section h2 { font-size: 1.4rem; }
+            #about p, .focus-item p, #contact p { font-size: 0.9rem; line-height: 1.7; }
+            .skills-list span { font-size: 0.8rem; padding: 6px 10px; }
+        }
+
+        main section.hidden-initial {
+            opacity: 0;
+            transform: translateY(25px); /* Less initial movement */
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        main section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <div class="container">
+        <header>
+            <img src="samunder.jpg" alt="Samunder" class="profile-pic">
+            <h1>Samunder</h1>
+            <p class="tagline" id="tagline"></p>
+        </header>
+
+        <main>
+            <section id="about" class="hidden-initial">
+                <h2><i class="fas fa-user-secret"></i> // About Me</h2>
+                <p>
+                    Hey, I'm Samunder, an 18-year-old BCA student.
+                    Passion: code, AI models, building intelligent applications, exploring new tech.
+                    Current focus: LeetCode problem-solving, learning Rust for systems programming.
+                    Executing...
+                </p>
+            </section>
+
+            <section id="focus" class="hidden-initial">
+                <h2><i class="fas fa-terminal"></i> // Current Focus</h2>
+                <div class="focus-grid">
+                    <div class="focus-item ai">
+                        <i class="fas fa-brain"></i>
+                        <h3>AI & ML</h3>
+                        <p>Exploring models, AI-driven solutions, understanding intelligence. Booting sequence...</p>
+                    </div>
+                    <div class="focus-item rust">
+                        <i class="fas fa-code"></i>
+                        <h3>Rust Lang</h3>
+                        <p>Performance, safety, modern systems dev. Compiling...</p>
+                    </div>
+                    <div class="focus-item leetcode">
+                        <i class="fas fa-keyboard"></i>
+                        <h3>LeetCode</h3>
+                        <p>Algorithmic thinking, coding proficiency, daily challenges. Processing...</p>
+                    </div>
+                    <div class="focus-item build">
+                        <i class="fas fa-cubes"></i>
+                        <h3>Projects</h3>
+                        <p>Creating & iterating, from tools to complex systems. Building...</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="skills" class="hidden-initial">
+                <h2><i class="fas fa-toolbox"></i> // Tech Arsenal</h2>
+                <div class="skills-list">
+                    <span>Python</span>
+                    <span class="highlight-skill">JavaScript</span>
+                    <span>AI/ML</span>
+                    <span>Rust</span>
+                    <span>React</span>
+                    <span>Node.js</span>
+                    <span>DataStruct</span>
+                    <span>Algorithms</span>
+                    <span>Git</span>
+                    <span>CLI_Tools</span>
+                </div>
+            </section>
+
+            <section id="contact" class="hidden-initial">
+                <h2><i class="fas fa-broadcast-tower"></i> // Connect</h2>
+                <p>Let's interface. Discuss ideas or collaborations. Signal established.</p>
+                <div class="social-links">
+                    <a href="https://github.com/samunderSingh12/" target="_blank" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                    <a href="https://www.linkedin.com/in/samunder-singh-402473340/" target="_blank" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                    <a href="https://x.com/Samunder12or8/" target="_blank" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; <span id="year"></span> Samunder // System Online</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current year in footer
+            document.getElementById('year').textContent = new Date().getFullYear();
+
+            // Typing effect
+            const taglineText = "AI_EXPLORER | RUST_ENTHUSIAST | CREATIVE_CODER | BCA_STUDENT";
+            const taglineElement = document.getElementById('tagline');
+            let charIndex = 0;
+            function typeTagline() {
+                if (charIndex < taglineText.length) {
+                    taglineElement.textContent += taglineText.charAt(charIndex);
+                    charIndex++;
+                    setTimeout(typeTagline, 85); // Adjusted speed for pixel font
+                } else {
+                    setTimeout(() => {
+                        taglineElement.textContent = '';
+                        charIndex = 0;
+                        typeTagline();
+                    }, 7000);
+                }
+            }
+            setTimeout(typeTagline, 700);
+
+            // Scroll reveal animation
+            const sections = document.querySelectorAll('main section.hidden-initial');
+            const observerOptions = { root: null, rootMargin: '0px', threshold: 0.15 };
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.remove('hidden-initial');
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            sections.forEach(section => observer.observe(section));
+
+            // Particle Canvas Animation
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            let particlesArray;
+            const particleColors = [
+                'rgba(118, 238, 198,', // Mint
+                'rgba(108, 160, 255,', // Blue
+                'rgba(184, 136, 226,'  // Lavender
+            ];
+            const colorProbabilities = [0.75, 0.125, 0.125]; // Higher chance for mint
+
+            function setCanvasSize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            setCanvasSize();
+            window.addEventListener('resize', () => { setCanvasSize(); initParticles(); });
+
+            class Particle {
+                constructor(x, y, directionX, directionY, size, color) {
+                    this.x = x; this.y = y;
+                    this.directionX = directionX; this.directionY = directionY;
+                    this.size = size; this.baseColor = color;
+                    this.opacity = Math.random() * 0.15 + 0.03; // Even more subtle
+                    this.color = this.baseColor + this.opacity + ')';
+                }
+                draw() {
+                    ctx.beginPath();
+                    // Draw squares for a more blocky particle feel
+                    ctx.rect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                }
+                update() {
+                    if (this.x > canvas.width + this.size || this.x < -this.size) this.directionX = -this.directionX;
+                    if (this.y > canvas.height + this.size || this.y < -this.size) this.directionY = -this.directionY;
+                    this.x += this.directionX; this.y += this.directionY;
+                    this.draw();
+                }
+            }
+            function getRandomColorWithProbability() { /* ... (same as before) ... */
+                let rand = Math.random(); let cumulativeProbability = 0;
+                for (let i = 0; i < particleColors.length; i++) {
+                    cumulativeProbability += colorProbabilities[i];
+                    if (rand < cumulativeProbability) return particleColors[i];
+                } return particleColors[0];
+            }
+            function initParticles() {
+                particlesArray = [];
+                let numberOfParticles = (canvas.height * canvas.width) / 18000; // Fewer
+                if (numberOfParticles > 60) numberOfParticles = 60;
+                if (numberOfParticles < 25) numberOfParticles = 25;
+                for (let i = 0; i < numberOfParticles; i++) {
+                    let size = (Math.random() * 2) + 1; // Pixel particle size (1-3px squares)
+                    let x = Math.random() * canvas.width; let y = Math.random() * canvas.height;
+                    let dX = (Math.random() * 0.15) - 0.075; let dY = (Math.random() * 0.15) - 0.075; // Slow
+                    let colorBase = getRandomColorWithProbability();
+                    particlesArray.push(new Particle(x, y, dX, dY, size, colorBase));
+                }
+            }
+            function animateParticles() {
+                requestAnimationFrame(animateParticles);
+                ctx.clearRect(0, 0, innerWidth, innerHeight);
+                for (let i = 0; i < particlesArray.length; i++) particlesArray[i].update();
+                // connectParticles(); // Keep lines commented out for cleaner pixel look
+            }
+            initParticles(); animateParticles();
+        });
+    </script>
+</body>
+</html>
